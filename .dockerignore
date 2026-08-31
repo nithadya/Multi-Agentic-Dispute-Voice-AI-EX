@@ -1,0 +1,97 @@
+# =============================================================================
+# .dockerignore — keep the build context small.
+#
+# Every byte in the build context is sent to the Docker daemon and considered
+# for image layers, even if not COPYed. Excluding the junk below drops
+# context from ~200 MB → ~5 MB and cuts build time meaningfully.
+# =============================================================================
+
+# ── Secrets — should NEVER reach the build context ─────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# ── VCS ────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.github/
+
+# ── Python build/run artefacts ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ── Notebooks — heavy, not needed at runtime ───────────────────────────────
+notebooks/
+
+# ── Tests — separate test image if needed ──────────────────────────────────
+tests/
+
+# ── UI source — built separately into docker/web/ image ────────────────────
+# (the api/voice/worker images don't need any of this)
+ui/node_modules/
+ui/.vite/
+ui/dist/
+ui/.next/
+
+# ── Documentation + slide deck ─────────────────────────────────────────────
+docs/
+README.md
+STUDENT_SETUP_GUIDE.md
+Weeks_15*.pdf
+*.docx
+*.md
+!requirements.txt
+!pyproject.toml
+
+# ── Data / scratch / temp ──────────────────────────────────────────────────
+data/raw/
+data/processed/
+data/embeddings/
+logs/
+*.log
+*.mp3
+*.wav
+*.tar
+*.tar.gz
+session-export-*.zip
+tmp_*
+
+# ── OS / editor ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Word/Office lock files ─────────────────────────────────────────────────
+~$*
+
+# ── Docker-compose state — never copy into an image ────────────────────────
+docker-compose.override.yml
+compose.prod.yml
+docker-compose.yml
+
+# ── AWS / Terraform / Copilot state — infra-as-code stays out of images ────
+copilot/
+terraform/
+.terraform/
+*.tfstate*

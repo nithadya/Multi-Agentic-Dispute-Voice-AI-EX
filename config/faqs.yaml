@@ -1,0 +1,148 @@
+# =============================================================================
+# DisputeAI E-Commerce Standard — KNOWN FAQs (Internal Knowledge Base)
+# =============================================================================
+# These FAQs are pre-loaded into the semantic CAG cache at agent startup.
+# Run `rag_tool.warm_cache(queries)` to generate + cache responses.
+#
+# Benefits:
+# - Instant responses for common questions (sub-1ms, $0)
+# - Semantic matching catches paraphrases (cosine ≥ 0.90)
+# - Cache stored in Qdrant (dedicated cag_cache collection, HNSW COSINE)
+# - Answers are hardcoded to ensure 100% accuracy and bypass LLM generation.
+# =============================================================================
+
+# ── Delivery & Shipping Issues ──────────────────────────────────────────────
+delivery_issues:
+  - query: "How long does delivery usually take in Sri Lanka?"
+    answer: "Standard delivery within Colombo 1-15 takes 1-2 working days. Greater Colombo and suburbs take 2-3 working days. Outstation deliveries (e.g., Kandy, Galle, Jaffna, Trincomalee) take 3-5 working days. During seasonal sales like Avurudu or Black Friday, please expect a delay of 2-3 additional days."
+  - query: "Which courier services do you use for shipping?"
+    answer: "We partner with leading local couriers including Pronto Lanka, Domex, Certis Lanka, Koombiyo Delivery, and Fardar Express. For high-value electronics and jewelry, we exclusively use Certis Lanka's secure delivery service."
+  - query: "My package says 'Delivered' but I haven't received it. What should I do?"
+    answer: "Please check with your family members, neighbours, or security guard first. Sometimes couriers leave the package at the reception. If you still can't find it, file a 'Missing Package Dispute' within 48 hours so we can investigate with the courier."
+  - query: "Can I open the package before paying Cash on Delivery (COD)?"
+    answer: "No, as per standard courier policies in Sri Lanka, customers cannot open the sealed package before paying the exact COD amount to the rider. If the item is damaged or incorrect after opening, you can easily file a return dispute."
+  - query: "What happens if I miss my delivery?"
+    answer: "Our courier partners will attempt delivery up to 3 times. They will call you on the registered mobile number before arriving. If all 3 attempts fail, the package will be returned to the seller, and a restocking fee may apply."
+  - query: "Can I change my delivery address after placing the order?"
+    answer: "Address changes can only be accommodated if the order is still in the 'Pending' or 'Processing' state. Once the status changes to 'Shipped', we cannot redirect the package to a new address."
+  - query: "Do you offer same-day delivery?"
+    answer: "Yes, 'Express Same-Day Delivery' is available for selected items via PickMe Flash or Uber Connect if the delivery address is within Colombo 1-15 and the order is placed before 10:00 AM on a working day. An additional fee of LKR 500-1000 applies."
+  - query: "Why is my tracking number showing 'Invalid' or 'Not Found'?"
+    answer: "Tracking numbers can take up to 24-48 hours to activate on the courier's system (e.g., Pronto/Domex tracking portal) after the seller hands over the parcel. Please check again after a few hours."
+  - query: "Can I pick up my order directly from the seller's shop?"
+    answer: "Yes, if the seller has enabled the 'Self-Pickup' option, you can collect the item directly from their physical store without paying delivery fees. You must bring the order confirmation SMS and your NIC."
+  - query: "Do you deliver to P.O. Boxes?"
+    answer: "No, our courier partners require a physical street address and a signature upon delivery. We do not deliver to P.O. Boxes."
+  - query: "What do I do if the courier rider is rude or asks for extra money?"
+    answer: "Courier riders are strictly prohibited from demanding tips or extra delivery fees beyond the invoice amount. Please report such incidents immediately to our customer support with the rider's phone number or vehicle number."
+  - query: "Can I specify a delivery time? Like after 5 PM?"
+    answer: "Standard delivery occurs between 8:00 AM and 6:00 PM. While you cannot select an exact hour, you can request the rider to come at a specific time when they call you, though they are not obligated to accommodate it."
+
+# ── International Shipping & Customs ─────────────────────────────────────────
+international_shipping:
+  - query: "Do you ship items from overseas (Global Collection)?"
+    answer: "Yes, items marked as 'Global Collection' are shipped directly from our international sellers (usually from China or India). Delivery for these items takes 15-25 working days."
+  - query: "Do I have to pay customs duties for international items?"
+    answer: "For most standard consumer items under LKR 15,000, customs duties are already included in the price. However, for high-value electronics or bulk imports, Sri Lanka Customs may charge additional duties which the buyer is responsible for."
+  - query: "My international order is stuck at Customs. What now?"
+    answer: "If your parcel is detained by Sri Lanka Customs (Central Mail Exchange), you will receive a notification letter from the Postal Department. You must visit the customs office with your invoice to clear it. If it is rejected, we will issue a partial refund."
+
+# ── Returns & Refunds ────────────────────────────────────────────────────────
+returns_refunds:
+  - query: "What is your standard return policy?"
+    answer: "We offer a 7-day hassle-free return policy for most items. The item must be unused, in its original packaging, and with all tags intact. Intimate apparel, swimwear, earrings, and perishable goods are excluded unless defective."
+  - query: "How do I return a damaged or defective item?"
+    answer: "If you receive a damaged item, report it within 48 hours of delivery. Open a dispute on our platform, upload clear photos/videos of the damage and the waybill. We will arrange a free pickup via our courier partners."
+  - query: "How long does a refund take?"
+    answer: "Once a return is approved and received at the warehouse, Debit/Credit Card refunds take 3-5 working days. Bank transfers to local banks (BOC, Commercial, Sampath, HNB) take 2-4 working days. Wallet refunds (Genie, FriMi) are usually instant."
+  - query: "I paid via Cash on Delivery (COD), how will I get my refund?"
+    answer: "For COD orders, refunds will be issued via bank transfer. You must provide your Sri Lankan bank account details (Bank Name, Branch, Account Number, Account Name) when opening the refund dispute."
+  - query: "Do I have to pay for return shipping?"
+    answer: "If the item is defective, damaged, or incorrect, we cover the return shipping costs entirely. If you are returning the item due to a 'Change of Mind' (only applicable for selected fashion categories), a return shipping fee of LKR 350 will be deducted from your refund."
+  - query: "Can I exchange a clothing item for a different size?"
+    answer: "Currently, we do not offer direct size exchanges. You need to return the original item for a refund (Change of Mind policy applies) and place a new order for the correct size."
+  - query: "Why was my return request rejected?"
+    answer: "Return requests are typically rejected if the item shows signs of use (e.g., perfume smell on clothes), lacks original tags/packaging, is past the 7-day return window, or belongs to a non-returnable category."
+  - query: "What is the policy for missing parts in a delivered product?"
+    answer: "If an item is missing parts (e.g., a blender missing its jug), please open an 'Incomplete Item Dispute' within 3 days. The seller will be mandated to send the missing parts separately, or you can opt for a full return and refund."
+  - query: "I received the wrong item entirely. What do I do?"
+    answer: "Open a 'Wrong Item Received' dispute immediately. Upload a photo of the item you received and the courier waybill on the package. Do not break the seal of the wrong item if it is in blister packaging."
+  - query: "How do I return a bulky item like a refrigerator?"
+    answer: "For large appliances or furniture, do not bring it to a drop-off point. Open a return request, and our specialized heavy-goods courier team will come to your house to inspect and pick up the item."
+  - query: "Can I drop off my return package at a store?"
+    answer: "Yes, you can select 'Drop-off' during the return process and hand over the securely packed item to any of our designated Hubs or partner outlets (e.g., selected Keells Super outlets) for free."
+
+# ── Payments, BNPL & Wallets ─────────────────────────────────────────────────
+payments:
+  - query: "What payment methods do you accept?"
+    answer: "We accept Cash on Delivery (COD), Visa/Mastercard/Amex, direct bank deposits, and local mobile wallets like FriMi, Genie, and eZ Cash. We also support BNPL (Buy Now Pay Later) options through Koko and Mintpay."
+  - query: "How do Koko and Mintpay installments work?"
+    answer: "Koko and Mintpay allow you to split your payment into 3 interest-free installments using your Debit or Credit card. The first installment is charged at checkout, and the remaining two are charged automatically in the subsequent 2 months."
+  - query: "My card was charged, but the order failed. What happens to my money?"
+    answer: "If your transaction failed but the amount was deducted (often due to timeouts at the payment gateway), the amount is automatically reversed by the bank. Please allow 24-48 hours for the funds to reflect back in your bank account."
+  - query: "Can I pay using a direct bank transfer?"
+    answer: "Yes, select 'Bank Deposit' at checkout. You must transfer the exact amount to our specified Commercial Bank or HNB account within 24 hours and upload the deposit slip or screenshot to confirm the order."
+  - query: "Is there a limit for Cash on Delivery (COD) orders?"
+    answer: "Yes, to prevent fraud and minimize risk for our riders, COD is only available for orders with a total value below LKR 50,000. For orders exceeding this amount, prepayment is required."
+  - query: "Why is COD not available for my location?"
+    answer: "COD might be disabled if your delivery address is in a high-risk area, an area not covered by our courier's cash collection service, or if your account has a history of multiple unaccepted/rejected COD deliveries."
+  - query: "Do you charge extra for credit card payments?"
+    answer: "No, we do not charge any additional surcharge or convenience fee for Visa, Mastercard, or Amex payments. The price you see at checkout is the final price."
+  - query: "Can I get a Commercial Bank or Sampath Bank credit card installment plan?"
+    answer: "Yes, for purchases above LKR 25,000, we offer 3, 6, 12, or 24-month installment plans with 0% interest for selected credit cards. Convert your transaction via the bank's portal after the purchase."
+  - query: "My OTP is not arriving for the card payment. What should I do?"
+    answer: "OTP delivery is handled entirely by your bank (e.g., HNB, Seylan). If it is delayed, check if your SMS inbox is full, or try restarting your phone. If the issue persists, contact your bank's card centre."
+
+# ── Seller & Warranty Disputes ───────────────────────────────────────────────
+seller_disputes:
+  - query: "The seller is not honoring the warranty. What can I do?"
+    answer: "If a seller refuses to honor a valid warranty for an item bought on our platform, please open a 'Warranty Dispute'. Our mediation team will intervene. Sellers found violating warranty terms face severe penalties."
+  - query: "What does 'Company Warranty' vs 'Seller Warranty' mean?"
+    answer: "A 'Company Warranty' means the item can be claimed at the official authorized agent in Sri Lanka (e.g., Abans for LG, Softlogic for Samsung). A 'Seller Warranty' means repairs/replacements are handled directly by the individual store you purchased from."
+  - query: "I suspect the branded item I received is fake. What is the process?"
+    answer: "We have a strict Zero-Tolerance policy for counterfeit goods. If you suspect an item is fake, open a 'Counterfeit Item Dispute' immediately with photo evidence. If verified, you receive a 100% refund, and the seller will be permanently banned."
+  - query: "The seller is asking me to pay outside the platform via WhatsApp. Should I?"
+    answer: "Never pay a seller directly via external bank transfers or reload if the order was placed on our platform. Doing so violates our terms, and DisputeAI cannot protect your money or assist with refunds if you are scammed."
+  - query: "The seller cancelled my order after I paid. When will I get my money?"
+    answer: "If a seller cancels a prepaid order (usually due to out-of-stock issues), the refund is triggered immediately on our end. Please allow 3-5 working days for the bank to process the reversal to your card."
+  - query: "What happens if a seller ignores my dispute?"
+    answer: "Sellers have 48 hours to respond to a raised dispute. If they fail to respond within the SLA (Service Level Agreement), the dispute is automatically escalated to our internal mediation team, and a decision will typically be made in favor of the buyer."
+  - query: "The seller sent me an empty box! I've been scammed."
+    answer: "Open a 'Missing Item/Empty Box' dispute immediately. We highly recommend customers take an unboxing video when receiving high-value items. We will cross-reference the package weight recorded by the courier with the seller's dispatched weight to verify the scam."
+  - query: "Can I leave a negative review for a bad seller?"
+    answer: "Yes, you can leave a review and rating within 30 days of receiving the order. Honest reviews help other Sri Lankan buyers. However, abusive language or profanity will cause the review to be removed."
+
+# ── Order Management ─────────────────────────────────────────────────────────
+order_management:
+  - query: "How do I cancel my order?"
+    answer: "You can cancel your order directly from your account dashboard as long as the status is 'Pending'. If the seller has already processed or shipped the order, cancellation is not possible, but you may refuse delivery (for COD) or request a return later."
+  - query: "Can I add items to an existing order?"
+    answer: "Unfortunately, once an order is confirmed, you cannot add items to it. You will need to place a separate new order for the additional items."
+  - query: "Why was my account suspended?"
+    answer: "Accounts may be suspended for violating our Terms of Service. Common reasons include unusually high return rates, repeatedly rejecting COD deliveries (return-to-sender abuse), abusive language towards sellers, or suspected fraudulent activity."
+  - query: "How do I delete my account and data?"
+    answer: "To delete your account in compliance with data privacy regulations, please go to Account Settings > Security > Request Account Deletion. Note that order histories related to past transactions will be retained for 5 years as required by Sri Lankan tax laws."
+  - query: "Can I get a VAT invoice for my company?"
+    answer: "Yes, if you require a VAT invoice, please enter your company's VAT Registration Number and Company Name in the 'Order Notes' section during checkout. The seller will include a valid tax invoice in the package."
+
+# ── Promotions, Vouchers & Loyalty ───────────────────────────────────────────
+promotions:
+  - query: "How do I use a discount voucher?"
+    answer: "Enter your promo code in the 'Voucher Code' box on the checkout page and click Apply. The discount will be deducted from your total. Note that only one voucher can be used per order."
+  - query: "Why is my bank card discount not applying?"
+    answer: "Bank discounts (e.g., 20% off for Commercial Bank Credit Cards) usually have specific terms: valid only on specific days, requires a minimum spend (e.g., LKR 5,000), or has a maximum discount cap. Ensure your cart meets all conditions."
+  - query: "Do loyalty points expire?"
+    answer: "Yes, DisputeAI Loyalty Points expire on the 31st of December of the following year they were earned. You will receive an SMS reminder 30 days before any points are set to expire."
+  - query: "Can I use multiple promo codes at once?"
+    answer: "No, the system only allows one promo code or voucher per transaction. However, you can combine a platform voucher with a bank card discount during mega sale events."
+
+# ── Customer Support & Escalation ────────────────────────────────────────────
+customer_support:
+  - query: "How can I contact customer support?"
+    answer: "You can reach our support team via the Live Chat feature on the website (available 08:00 AM to 10:00 PM), or by calling our hotline at 011 234 5678. You can also email us at support@disputeai.lk."
+  - query: "The AI couldn't resolve my dispute. How do I talk to a human agent?"
+    answer: "If the AI mediation does not satisfy you, simply type 'Talk to a human' or 'Escalate' in the chat. Your dispute will be instantly routed to a Tier-2 human dispute resolution officer for manual review."
+  - query: "I want to escalate a severe issue with a seller."
+    answer: "For severe issues involving fraud, threats, or major policy violations, please email escalate@disputeai.lk with your Order ID and evidence. Our Trust & Safety team reviews these within 12 hours."
+  - query: "Can I complain to the Consumer Affairs Authority (CAA)?"
+    answer: "Yes, as a consumer in Sri Lanka, you have the right to lodge a complaint with the Consumer Affairs Authority (CAA) via 1977 if you believe you have been treated unfairly. However, we highly recommend utilizing our internal Dispute Resolution AI first for a faster resolution."

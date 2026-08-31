@@ -1,0 +1,94 @@
+# ── Secrets — NEVER COMMIT ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+credentials.json
+service-account*.json
+.aws/
+
+# ── Python ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+
+# ── Node / UI ──────────────────────────────────────────────────────
+ui/node_modules/
+ui/dist/
+ui/.vite/
+ui/.next/
+**/node_modules/
+**/dist/
+*.tsbuildinfo
+
+# ── Docker / build artefacts ───────────────────────────────────────
+*.tar
+*.tar.gz
+.docker/
+hf_cache/
+
+# ── OS / Editor ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Word/Office lock files ─────────────────────────────────────────
+~$*
+
+# ── Large generated artefacts not needed in git ───────────────────
+*.mp3
+*.wav
+session-export-*.zip
+tmp_*.mp3
+
+# ── Generated / instructor-only docs (NOT for student distribution) ───────
+docs/*.docx
+# Keep only the two student-facing docs:
+!docs/AWS_From_Zero_Account_and_IAM_Setup.docx
+!docs/Nawaloka_Cloud_Services_Cost_and_Decisions.docx
+# Instructor-only material + ad-hoc generators (kept locally, never shared):
+docs/week-15-16-deck.md
+docs/_build_*.js
+docs/_md_to_docx.py
+scripts/build_guidelines.py
+# Instructor teaching guides (role-play scripts) — never share with students:
+docs/*teacher-guide*
+docs/*teacher_guide*
+
+# ── Slide PDF — too big for git, distribute separately ────────────
+Weeks_15*.pdf
+
+# ── Local data / scratch ──────────────────────────────────────────
+data/*
+!data/.gitkeep
+logs/
+*.log
+
+# ── AWS Copilot generated state ───────────────────────────────────
+# (manifests under copilot/ ARE tracked — they're infra-as-code)
+copilot/.workspace
+copilot/**/addons/.cfn
+
+# ── Notebook outputs (we'll commit clean notebooks) ───────────────
+# Uncomment if you want to strip outputs:
+# notebooks/*.ipynb

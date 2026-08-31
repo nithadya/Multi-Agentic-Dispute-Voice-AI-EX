@@ -1,0 +1,67 @@
+# =============================================================================
+# voice — LiveKit voice worker (Backend Service)
+#
+# Connects OUTBOUND to LiveKit Cloud over WebSocket. No public ingress.
+# Tasks live in public subnets so they can reach LiveKit + Deepgram +
+# ElevenLabs + Groq without paying NAT GW costs.
+#
+# 1 vCPU / 2 GiB — Silero VAD + STT/TTS streams + orchestrator wiring
+# need real memory. 512 MiB OOMs on first call.
+#
+# Pre-warming (warm_start in src/voice/agent.py) primes the LLM
+# connection pool at boot, so the first user call doesn't pay TLS cost.
+# =============================================================================
+
+name: voice
+type: Backend Service
+
+image:
+  location: 166199670158.dkr.ecr.us-west-2.amazonaws.com/disputeai/voice:latest
+  # voice Dockerfile DOES install procps, so pgrep works here.
+  healthcheck:
+    command: ["CMD-SHELL", "pgrep -f voice.run >/dev/null || exit 1"]
+    interval: 30s
+    retries: 3
+    timeout: 5s
+    start_period: 90s
+
+cpu: 1024
+memory: 2048
+platform: linux/x86_64
+count: 1                  # On-demand: scale via `copilot svc scale --name voice --count 0|1`
+exec: true
+network:
+  connect: true
+  vpc:
+    placement: public
+
+variables:
+  REDIS_URL: redis://disputeai-dev.jahapc.0001.usw2.cache.amazonaws.com:6379/0
+  LOG_LEVEL: info
+  TIMEZONE: Asia/Colombo
+  # The voice worker doesn't need Redis directly — its memory writes go
+  # via the orchestrator's `_save_voice_turn_async` which calls
+  # `touch_session_sync` + `maybe_auto_title_sync` synchronously in a thread.
+
+secrets:
+  SUPABASE_DB_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/SUPABASE_DB_URL
+  SUPABASE_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/SUPABASE_URL
+  SUPABASE_ANON_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/SUPABASE_ANON_KEY
+  QDRANT_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/QDRANT_URL
+  QDRANT_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/QDRANT_API_KEY
+  QDRANT_COLLECTION_NAME: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/QDRANT_COLLECTION_NAME
+  PROVIDER: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/PROVIDER
+  NEO4J_URI: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/NEO4J_URI
+  NEO4J_USERNAME: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/NEO4J_USERNAME
+  NEO4J_PASSWORD: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/NEO4J_PASSWORD
+  GROQ_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/GROQ_API_KEY
+  OPENAI_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/OPENAI_API_KEY
+
+  LANGFUSE_PUBLIC_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LANGFUSE_PUBLIC_KEY
+  LANGFUSE_SECRET_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LANGFUSE_SECRET_KEY
+  LANGFUSE_BASE_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LANGFUSE_BASE_URL
+  LIVEKIT_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LIVEKIT_URL
+  LIVEKIT_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LIVEKIT_API_KEY
+  LIVEKIT_API_SECRET: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LIVEKIT_API_SECRET
+  DEEPGRAM_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/DEEPGRAM_API_KEY
+  ELEVEN_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/ELEVEN_API_KEY

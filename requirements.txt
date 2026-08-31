@@ -1,0 +1,150 @@
+# Agentic Memory Design — Dependencies
+# Python 3.10+
+# Install: pip install -r requirements.txt
+
+# ========================================
+# Core LLM and Embedding Services
+# ========================================
+openai>=1.12.0                    # OpenAI API for GPT models and embeddings
+anthropic>=0.18.0                 # Anthropic Claude models (optional)
+cohere>=4.47                      # Cohere for embeddings/reranking (optional)
+
+# ========================================
+# LangChain Ecosystem (Primary RAG Framework)
+# ========================================
+langchain>=0.1.0                  # Core LangChain framework
+langchain-core>=0.1.0             # Core abstractions (prompts, runnables)
+langchain-community>=0.0.20       # Community integrations (includes Chroma)
+langchain-openai>=0.0.5           # OpenAI LangChain integration (Chat + Embeddings)
+langchain-text-splitters>=0.2.0   # Text chunking utilities (semantic & fixed)
+langgraph>=0.0.30                 # State-based agent orchestration
+
+# ========================================
+# Model Context Protocol (MCP) — Week 11
+# ========================================
+mcp>=1.27.0                       # Official Python SDK for MCP servers
+fastmcp>=3.0.0                    # FastMCP high-level server API
+langchain-mcp-adapters>=0.2.2     # Bridge MCP tools into LangChain/LangGraph
+
+# ========================================
+# Web Search
+# ========================================
+tavily-python>=0.3.0              # Tavily real-time web search API
+
+# ========================================
+# Web Crawling and Content Extraction
+# ========================================
+playwright>=1.40.0                # Browser automation for JS-rendered sites
+beautifulsoup4>=4.12.0            # HTML parsing and cleanup
+markdownify>=0.11.6               # HTML to Markdown conversion
+lxml>=5.1.0                       # Fast XML/HTML processing
+nest-asyncio>=1.5.0               # Enable nested asyncio loops in Jupyter
+
+# ========================================
+# Vector Store and Semantic Search
+# ========================================
+supabase>=2.3.0                   # Supabase Python client (Memory + CRM)
+psycopg2-binary>=2.9.9            # PostgreSQL adapter for Python
+pgvector>=0.2.4                   # pgvector support for memory embeddings (Supabase)
+qdrant-client>=1.9.0              # Qdrant Cloud — RAG knowledge-base vectors
+sentence-transformers>=2.3.1      # Optional: for local embeddings
+
+# ========================================
+# Graph Database (Graph RAG — Neo4j Aura)
+# ========================================
+neo4j>=5.0.0                      # Neo4j python driver for Graph RAG
+
+
+# ========================================
+# Text Processing and Tokenization
+# ========================================
+tiktoken>=0.5.2                   # OpenAI tokenizer for accurate token counting
+nltk>=3.8.1                       # NLP utilities for sentence segmentation
+spacy>=3.7.0                      # Advanced NLP for semantic chunking (optional)
+
+# ========================================
+# Configuration and Environment
+# ========================================
+python-dotenv>=1.0.0              # Load secrets from .env files
+pydantic>=2.5.0                   # Data validation and settings management
+pydantic-settings>=2.1.0          # Settings management with env support
+pyyaml>=6.0                       # YAML config loading (config/param.yaml)
+typing-extensions>=4.9.0          # Backports of typing features for older Python
+
+# ========================================
+# Jupyter Server (interactive development)
+# ========================================
+jupyter>=1.0.0                    # Jupyter notebook server
+ipykernel>=6.29.0                 # IPython kernel for notebooks
+notebook>=7.0.0                   # Modern Jupyter notebook interface
+# (ipywidgets and ipython are listed below in Notebook & document utilities)
+
+# ========================================
+# Utilities and Helper Libraries
+# ========================================
+tqdm>=4.66.0                      # Progress bars for long operations
+pandas>=2.2.0                     # Data manipulation and analysis
+numpy>=1.26.0                     # Numerical computing
+matplotlib>=3.7.0                 # Plotting (notebook 03 VAD probability plot)
+scipy>=1.11.0                     # WAV encoding for the recording widget
+requests>=2.31.0                  # HTTP requests for API calls
+aiohttp>=3.9.0                    # Async HTTP for concurrent operations
+
+# ========================================
+# Memory & Reminders (Week 02) - Supabase
+# ========================================
+sqlalchemy>=2.0.0                # SQL ORM for Postgres metadata
+apscheduler>=3.10.0              # Task scheduling for reminders
+pytz>=2024.1                     # Timezone support for reminders
+python-dateutil>=2.8.0           # Date parsing utilities
+
+# ========================================
+# Observability & Tracing (LangFuse)
+# ========================================
+langfuse>=2.0.0                   # LangFuse tracing, cost tracking, prompt versioning
+loguru>=0.7.0                     # Structured logging (replaces stdlib logging)
+
+# ========================================
+# API Server (FastAPI)
+# ========================================
+fastapi>=0.110.0                  # Async HTTP API framework
+uvicorn[standard]>=0.27.0         # ASGI server for FastAPI
+sse-starlette>=1.8.0              # Server-Sent Events support
+starlette>=0.36.0                 # ASGI primitives (used by api/middleware.py)
+
+# ========================================
+# Voice Pipeline (LiveKit + Deepgram) — Week 14
+# ========================================
+livekit>=1.0.0                    # LiveKit Python SDK (room client)
+livekit-agents>=1.5.0             # Agents framework (Agent, AgentSession, cli)
+livekit-plugins-deepgram>=1.5.0   # Deepgram STT (and Deepgram TTS fallback)
+livekit-plugins-elevenlabs>=1.5.0 # ElevenLabs TTS — premium voices (default)
+livekit-plugins-silero>=1.5.0     # Silero VAD plugin for LiveKit
+deepgram-sdk>=6.0.0               # Deepgram SDK v6 (used in notebook 03 STT demo)
+elevenlabs>=2.0.0                 # ElevenLabs SDK (used in notebook 03 TTS demo)
+sounddevice>=0.5.0                # PortAudio bindings (notebook recording)
+onnxruntime>=1.17.0               # Silero VAD inference (notebook 03)
+torch>=2.0.0                      # PyTorch — required by Silero hub download
+
+# ========================================
+# Background Worker (Week 15 — production refactor)
+# ========================================
+arq>=0.26.0                       # Async Redis-backed worker (memory writes, auto-title, distill)
+redis>=5.0.0                      # Redis client (transitive dep of arq, pinned for compose service)
+
+# ========================================
+# Notebook & document utilities
+# ========================================
+ipython>=8.0.0                    # IPython.display.Audio in notebooks
+ipywidgets>=8.1.1                 # Recording widget (notebook 03 + 04)
+python-docx>=1.0.0                # Word document generation (scripts/build_guidelines.py)
+
+# ========================================
+# Development Tools (Optional)
+# ========================================
+black>=24.1.0                     # Code formatting
+flake8>=7.0.0                     # Linting
+mypy>=1.8.0                       # Static type checking
+pytest>=8.0.0                     # Testing framework
+pytest-asyncio>=0.23.0            # Async test support
+

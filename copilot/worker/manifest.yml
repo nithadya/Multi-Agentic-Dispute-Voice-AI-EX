@@ -1,0 +1,65 @@
+# =============================================================================
+# worker — Arq background worker (Backend Service, no public ingress)
+#
+# Reuses the same Dockerfile as `api`. CMD override below switches from
+# `uvicorn` to `arq workers.tasks.WorkerSettings`.
+#
+# Same CPU/memory profile as api because the worker builds the same
+# orchestrator on boot (Supabase + Qdrant + LLM clients) — these tasks
+# need to be able to call the orchestrator's tools.
+#
+# Healthcheck pings Redis from inside the container — proves both the
+# process is alive AND that the broker connection works.
+# =============================================================================
+
+name: worker
+type: Backend Service
+
+image:
+  # Reuses the api image (same code) — only the CMD differs.
+  location: 166199670158.dkr.ecr.us-west-2.amazonaws.com/disputeai/worker:latest
+  # No port — the worker has no HTTP surface. Talks Redis only.
+  healthcheck:
+    command:
+      - "CMD-SHELL"
+      - "python -c 'import os,redis; redis.from_url(os.environ[\"REDIS_URL\"]).ping()' || exit 1"
+    interval: 30s
+    retries: 3
+    timeout: 10s
+    start_period: 2m       # boot includes orchestrator wiring (Supabase + Qdrant)
+
+# Override the api image CMD — run arq instead of uvicorn.
+command: ["arq", "workers.tasks.WorkerSettings"]
+
+cpu: 512
+memory: 1024
+platform: linux/x86_64
+count: 1
+exec: true
+network:
+  connect: true
+  vpc:
+    placement: public
+
+variables:
+  REDIS_URL: redis://disputeai-dev.jahapc.0001.usw2.cache.amazonaws.com:6379/0
+  LOG_LEVEL: info
+  TIMEZONE: Asia/Colombo
+
+secrets:
+  SUPABASE_DB_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/SUPABASE_DB_URL
+  SUPABASE_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/SUPABASE_URL
+  SUPABASE_ANON_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/SUPABASE_ANON_KEY
+  QDRANT_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/QDRANT_URL
+  QDRANT_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/QDRANT_API_KEY
+  QDRANT_COLLECTION_NAME: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/QDRANT_COLLECTION_NAME
+  PROVIDER: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/PROVIDER
+  NEO4J_URI: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/NEO4J_URI
+  NEO4J_USERNAME: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/NEO4J_USERNAME
+  NEO4J_PASSWORD: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/NEO4J_PASSWORD
+  GROQ_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/GROQ_API_KEY
+  OPENAI_API_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/OPENAI_API_KEY
+
+  LANGFUSE_PUBLIC_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LANGFUSE_PUBLIC_KEY
+  LANGFUSE_SECRET_KEY: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LANGFUSE_SECRET_KEY
+  LANGFUSE_BASE_URL: arn:aws:ssm:us-west-2:166199670158:parameter/copilot/disputeai/dev/secrets/LANGFUSE_BASE_URL

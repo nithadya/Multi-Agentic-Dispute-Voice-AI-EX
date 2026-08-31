@@ -1,0 +1,201 @@
+# Configuration for Context Engineering RAG System
+# Edit this file to customize behavior without changing code
+
+# ============================================================================
+# Provider Settings
+# ============================================================================
+provider:
+  # Which provider to use: "openrouter" (recommended) or "openai"
+  # OpenRouter gives you access to ALL providers with one API key
+  default: openai
+  
+  # Model tier to use: "general", "strong", or "reason"
+  tier: general
+  
+  # OpenRouter base URL
+  openrouter_base_url: https://openrouter.ai/api/v1
+
+# ============================================================================
+# LLM Defaults
+# ============================================================================
+llm:
+  temperature: 0.0
+  max_tokens: 2000
+  streaming: false
+
+# ============================================================================
+# Embedding Settings
+# ============================================================================
+embedding:
+  # Model tier: "default" (3072d) or "small" (1536d)
+  # ⚠️ Supabase pgvector IVFFlat indexes max 2000 dims → use "small"
+  tier: small
+  batch_size: 100
+  show_progress: false
+
+# ============================================================================
+# Chunking Configuration
+# ============================================================================
+chunking:
+  # Fixed-size chunking
+  fixed:
+    chunk_size: 800
+    chunk_overlap: 100
+  
+  # Semantic chunking
+  semantic:
+    max_chunk_size: 1000
+    min_chunk_size: 200
+  
+  # Sliding-window chunking
+  sliding:
+    window_size: 512
+    stride_size: 256
+  
+  # Parent-child chunking
+  parent_child:
+    parent_size: 1200
+    child_size: 250
+    child_overlap: 50
+  
+  # Late chunking
+  late:
+    base_size: 1000
+    split_size: 300
+    context_window: 150
+
+# ============================================================================
+# Retrieval Configuration
+# ============================================================================
+retrieval:
+  top_k: 4
+  # OpenAI text-embedding-3-small produces cosine scores in the 0.40-0.65
+  # range for genuinely relevant chunks on this corpus (measured: e.g.
+  # "skin inspection on admission" → 0.558 against the actual paragraph
+  # in patient_safety.md). The earlier 0.7 was tuned for a different
+  # embedder and dropped every legitimate match — RAG kept replying "I
+  # don't have that information" even though the KB has the content.
+  similarity_threshold: 0.35
+
+# ============================================================================
+# CAG (Cache-Augmented Generation) — Qdrant Semantic Vector Cache
+# ============================================================================
+# Cache lives in a dedicated Qdrant collection (separate from RAG KB).
+# Lookups embed the query and do KNN-1 cosine search; a HIT is declared
+# when cosine_similarity ≥ similarity_threshold.
+# TTL is enforced at read time (entries older than cache_ttl are skipped).
+cag:
+  collection_name: cag_cache          # Qdrant collection for cached entries
+  similarity_threshold: 0.65          # tuned for all-MiniLM-L6-v2 (small model has
+                                      # lower cosine baseline than OpenAI embeddings);
+                                      # measured paraphrases land at 0.66-0.74, unrelated
+                                      # at 0.43, so 0.65 hits paraphrases cleanly
+  cache_ttl: 86400                    # TTL per entry in seconds (24h). 0 = no expiry
+  max_cache_size: 1000                # Informational limit
+
+# ============================================================================
+# CRAG (Corrective RAG)
+# ============================================================================
+crag:
+  confidence_threshold: 0.6
+  expanded_k: 8
+
+# ============================================================================
+# Crawling Configuration
+# ============================================================================
+crawling:
+  max_depth: 3
+  delay_seconds: 2.0
+  max_pages: 100
+
+# ============================================================================
+# Paths (relative to project root)
+# ============================================================================
+paths:
+  data_dir: data
+  kb_dir: data/knowledge_base
+  # Markdown & JSONL dirs are fallback ingestion sources (pipeline.py)
+  markdown_dir: data/disputeai_markdown
+  logs_dir: logs
+
+# ============================================================================
+# Logging
+# ============================================================================
+logging:
+  enabled: true
+  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  log_tokens: true
+  log_latency: true
+
+# ============================================================================
+# Observability — LangFuse Tracing
+# ============================================================================
+observability:
+  enabled: true   # Set false to disable all tracing (zero overhead)
+
+# ============================================================================
+# Qdrant Cloud Configuration
+# ============================================================================
+qdrant:
+  # Collection name for RAG chunks (e-commerce policy documents)
+  collection_name: ecommerce_policies
+  # Note: QDRANT_API_KEY and QDRANT_URL must be set in .env file
+
+# ============================================================================
+# Graph RAG — Neo4j Aura (Week 11 inspired)
+# ============================================================================
+# Stores vendor policies as a knowledge graph for multi-hop reasoning.
+# This solves the "RAG Bottleneck" where standard vector search cannot
+# traverse conditional policy logic (e.g. "If X applies, Y is void unless Z").
+graph:
+  enabled: true
+  database: neo4j          # Default Aura database name
+  max_hops: 2              # Maximum Cypher traversal depth
+  top_k_nodes: 10          # Max policy nodes to return per query
+  crag_max_retries: 2      # Graph CRAG rewrite loop limit (same as vector CRAG)
+  # NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD must be set in .env
+
+# ============================================================================
+# Voice Pipeline (LiveKit + Deepgram) 
+# ============================================================================
+# These settings drive the standalone voice worker (`src/voice/`) which
+# joins LiveKit rooms and pipes audio through Silero VAD → Deepgram STT →
+# AgentOrchestrator.achat() → Deepgram TTS. The worker is opt-in via
+# `make voice` (native) or `make demo-voice` (Docker profile). Required
+# env vars: LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, DEEPGRAM_API_KEY.
+voice:
+  # ── STT: Deepgram Nova-3 (fast streaming, ~300ms latency) ──────────────
+  stt_provider: deepgram
+  stt_model: nova-3
+  stt_language: en
+
+  # ── TTS: ElevenLabs Turbo v2.5 (premium voices, ~250ms TTFB) ──────────
+  # Switch to "deepgram" + tts_model "aura-2-andromeda-en" to use Deepgram TTS instead.
+  tts_provider: deepgram
+  tts_model: aura-asteria-en         # low-latency model — recommended for voice agents
+  tts_voice_id: 9BWtsMINqrJLrRacOk9x   # "Aria" (ElevenLabs default). Browse voices at
+                                       # https://elevenlabs.io/app/voice-library — paste the voice
+                                       # ID here to swap. Premium-only voices work with a paid key.
+
+  # ── VAD + EOU policy ──────────────────────────────────────────────────
+  # Tuned for snappy turn-taking. Combined endpoint =
+  #   silence_threshold_ms + min_endpointing_delay
+  # 500ms + 500ms was eating an entire SECOND on every turn before the
+  # We reduced this to 200ms + 100ms (300ms total) to make the AI respond instantly.
+  vad_threshold: 0.5                   # Silero P(speech) cutoff (lowered for better pickup)
+  silence_threshold_ms: 300            # Silence before end-of-turn (Layer 2 of EOU)
+  min_endpointing_delay: 0.3           # Confirmation buffer in seconds (Layer 3)
+  interruption_enabled: true           # Allow user to barge in
+  sample_rate: 16000                   # Both Deepgram + Silero want 16 kHz mono
+
+# ============================================================================
+# Required Environment Variables
+# ============================================================================
+# These must be set in .env file:
+#   - OPENROUTER_API_KEY (if using openrouter provider)
+#   - OPENAI_API_KEY (if using openai provider directly)
+#   - ANTHROPIC_API_KEY (if using anthropic provider directly)
+#   - GOOGLE_API_KEY (if using google/gemini provider directly)
+#   - GROQ_API_KEY (if using groq provider directly)
+#   - QDRANT_API_KEY (required for Qdrant Cloud)
+#   - QDRANT_URL (required for Qdrant Cloud - e.g., https://xxxxx-xxxxx.us-east.aws.cloud.qdrant.io)

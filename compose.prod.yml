@@ -1,0 +1,142 @@
+# =============================================================================
+# compose.prod.yml — production-shape local stack (Week 15)
+#
+# This file mirrors the topology we'll deploy to AWS Fargate in Week 16:
+#
+#   - 2 API replicas behind nginx (load-balanced)
+#   - 1 Worker (Arq, drains Redis queue)
+#   - 1 Voice (LiveKit agent, outbound only)
+#   - 1 Redis (queue broker + light cache)
+#   - 1 Web (nginx serving built React + reverse-proxy + balancer for /api)
+#
+# Run it:
+#     docker compose -f compose.prod.yml up --build
+#
+# Stop it:
+#     docker compose -f compose.prod.yml down
+#
+# Wipe Redis state too:
+#     docker compose -f compose.prod.yml down -v
+#
+# Differences from docker-compose.yml (the dev file):
+#   - 2 API replicas (proves the cache is genuinely shared)
+#   - No source-code volume mounts — the image IS the artefact
+#   - Worker + Redis are first-class, not opt-in via profile
+#   - Voice is always-on (matches the AWS topology where it's a dedicated service)
+#   - Each service has restart: unless-stopped + healthcheck
+# =============================================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: disputeai-redis-prod
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── API replicas ────────────────────────────────────────────────────────
+  # `deploy.replicas: 2` makes Compose run two copies of the same service.
+  # Each gets its own container name suffix (-1, -2). nginx (the web
+  # service) load-balances across them via DNS-based round-robin on the
+  # service name "api".
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: disputeai-api
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      ARQ_WORKER_ENABLED: "true"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - hf_cache_prod:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      replicas: 2                 # ← the headline production-shape change
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # ── Background worker ───────────────────────────────────────────────────
+  worker:
+    image: disputeai-api           # reuse the api image
+    command: ["arq", "workers.tasks.WorkerSettings"]
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - hf_cache_prod:/root/.cache/huggingface
+    healthcheck:
+      # `pgrep` lives in `procps` which the slim runtime omits.
+      # Probe Redis directly from the worker — proves both the process is up
+      # AND that it can reach its broker. That's the actual liveness condition.
+      test: ["CMD", "python", "-c", "import os,redis; redis.from_url(os.environ['REDIS_URL']).ping()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── Voice worker — always on in prod-shape ─────────────────────────────
+  voice:
+    build:
+      context: .
+      dockerfile: docker/voice/Dockerfile
+    image: disputeai-voice
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - hf_cache_prod:/root/.cache/huggingface
+    restart: unless-stopped
+
+  # ── Web (nginx serving React + load-balancing /api → replicas) ─────────
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    image: disputeai-web
+    ports:
+      - "8080:80"                 # browse to http://localhost:8080
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  hf_cache_prod:
+    name: disputeai_hf_cache_prod
+  redis_prod_data:
+    name: disputeai_redis_prod_data

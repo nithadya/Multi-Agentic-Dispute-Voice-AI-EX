@@ -1,0 +1,150 @@
+# =============================================================================
+# DisputeAI E-Commerce Specialist — local / single-host deployment
+#
+# Default services (always on):
+#
+#   api   FastAPI + agent + MCP subprocesses        :8000
+#   web   nginx + React SPA + /api reverse proxy    :8080 → 80
+#
+# Optional services (opt-in via Compose profiles):
+#
+#   voice (profile: voice) — LiveKit voice worker, no exposed port
+#                            (connects outbound to LiveKit Cloud)
+#
+# Everything else (Supabase, Qdrant, Groq, OpenRouter, Langfuse, OpenAI,
+# LiveKit Cloud, Deepgram) is external — bring keys in via a ``.env`` file
+# at the project root.
+#
+# Usage:
+#     docker compose up --build              # default stack: api + web
+#     docker compose --profile voice up -d   # also start the voice worker
+#     docker compose logs -f api             # follow api logs
+#     docker compose logs -f voice           # follow voice logs
+#     docker compose down                    # stop default services
+#     docker compose --profile voice down    # stop everything including voice
+#     docker compose down -v                 # also wipe the HF model cache volume
+# =============================================================================
+
+services:
+  # Redis — Arq queue broker (Week 15).
+  # In production this becomes ElastiCache; locally it's a single container.
+  redis:
+    image: redis:7-alpine
+    container_name: disputeai-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"               # exposed for local arq-CLI introspection
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: disputeai-api
+    container_name: disputeai-api
+    ports:
+      - "8000:8000"               # exposed for /docs and direct API access
+    env_file:
+      - .env                      # SUPABASE_DB_URL, GROQ_API_KEY, etc.
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      ARQ_WORKER_ENABLED: "true"  # off → inline BackgroundTasks; on → Arq queue
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      # Persist the sentence-transformers model across restarts
+      # (~90 MB; without this it re-downloads every container start).
+      - hf_cache:/root/.cache/huggingface
+      - ./src:/app/src  # Live reload source code
+      - ./config:/app/config
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 300s           # lifespan warmup needs time on cold start
+    restart: unless-stopped
+
+  # Arq worker — drains memory/distill/auto-title jobs off the request path.
+  # Reuses the api image; only the CMD differs.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: disputeai-api             # same image as api — single build, faster CI
+    container_name: disputeai-worker
+    command: ["arq", "workers.tasks.WorkerSettings"]
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - ./src:/app/src  # Live reload source code
+      - ./config:/app/config
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "arq.*WorkerSettings"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    image: disputeai-web
+    container_name: disputeai-web
+    ports:
+      - "8080:80"                 # browse to http://localhost:8080
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # Voice worker — opt-in via the ``voice`` profile.
+  # Connects outbound to LiveKit Cloud; no exposed port.
+  # Brought up only when running e.g. ``docker compose --profile voice up``.
+  voice:
+    profiles: ["voice"]
+    build:
+      context: .
+      dockerfile: docker/voice/Dockerfile
+    image: disputeai-voice
+    container_name: disputeai-voice
+    env_file:
+      - .env                      # LIVEKIT_*, DEEPGRAM_API_KEY, plus the
+                                  # SUPABASE/Qdrant/LLM keys achat() needs
+    volumes:
+      # Share the same sentence-transformers cache as the api service so
+      # the local CAG embedder doesn't re-download per container.
+      - hf_cache:/root/.cache/huggingface
+      - ./src:/app/src
+      - ./config:/app/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
+    name: disputeai_hf_cache
+  redis_data:
+    name: disputeai_redis_data

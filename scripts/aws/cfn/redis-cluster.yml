@@ -1,0 +1,75 @@
+# =============================================================================
+# ElastiCache (Redis) — standalone CloudFormation stack
+#
+# Single-node cache.t4g.micro Redis cluster, ~$13/mo.
+#
+# Deployed AFTER `copilot env deploy --name dev` succeeds. The deploy
+# script (scripts/aws/deploy_redis.sh) reads VPC + subnet IDs from the
+# env stack's CFN exports and passes them as parameters here.
+#
+# This template is intentionally separate from Copilot's env addons
+# because env addons run within the same CFN deployment as the env
+# stack — they can't ImportValue exports from a stack that hasn't
+# finished creating yet (chicken-and-egg).
+# =============================================================================
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where Redis will live (from Copilot env stack)
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least 2 subnets in different AZs for Redis subnet group
+  EnvName:
+    Type: String
+    Default: dev
+    Description: Environment name (used in tagging + naming)
+
+Resources:
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: !Sub "disputeai-${EnvName} Redis subnet group"
+      SubnetIds: !Ref SubnetIds
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "disputeai-${EnvName} Redis ingress (6379 from VPC)"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.0.0.0/16
+          Description: VPC-internal Redis access
+
+  RedisCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      ClusterName: !Sub "disputeai-${EnvName}"
+      Engine: redis
+      EngineVersion: "7.1"
+      CacheNodeType: cache.t4g.micro
+      NumCacheNodes: 1
+      VpcSecurityGroupIds:
+        - !GetAtt RedisSecurityGroup.GroupId
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      Port: 6379
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: copilot-application
+          Value: disputeai
+        - Key: copilot-environment
+          Value: !Ref EnvName
+
+Outputs:
+  RedisEndpoint:
+    Description: Redis primary endpoint hostname (use in REDIS_URL)
+    Value: !GetAtt RedisCluster.RedisEndpoint.Address
+  RedisPort:
+    Description: Redis port
+    Value: !GetAtt RedisCluster.RedisEndpoint.Port
+  RedisSecurityGroupId:
+    Description: SG to attach to ECS tasks that talk Redis
+    Value: !Ref RedisSecurityGroup

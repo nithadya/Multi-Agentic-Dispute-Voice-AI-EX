@@ -1,0 +1,28 @@
+# =============================================================================
+# disputeai — dev environment
+#
+# Network shape: PUBLIC SUBNETS ONLY, NO NAT GATEWAYS.
+#
+# Why: course-grade deploy. NAT Gateways cost ~$32/month each (Copilot
+# defaults to 2 = $64/mo before any traffic). Tasks placed in public
+# subnets with public IPs can reach the internet directly through the
+# Internet Gateway — same outbound connectivity, $64 cheaper.
+#
+# Trade-off: tasks get a public IP. Security groups + ALB + IAM still
+# control who reaches them. For a production deployment serving real
+# patient data, switch to private subnets + NAT (uncomment the block
+# below and add `placement: private` to each service manifest).
+# =============================================================================
+
+name: dev
+type: Environment
+
+# Copilot's default networking: 2 public + 2 private subnets + 2 NAT GWs.
+# We tried public-only to skip the ~$64/mo NAT cost but Copilot's validator
+# requires matched public/private AZs. Accepting the default for now.
+#
+# To reduce to 1 NAT (~$32/mo) once deployed: edit the CF template after
+# stack creation, or migrate to a custom imported VPC.
+
+observability:
+  container_insights: false   # ~$0.20/task/day if enabled — off for course

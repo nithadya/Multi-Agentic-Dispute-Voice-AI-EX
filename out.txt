@@ -1,0 +1,40 @@
+: stream-open
+
+data: {"type": "stage_start", "stage": "recall_st", "label": "Loading your conversation history"}
+
+data: {"type": "stage_start", "stage": "customer", "label": "Customer"}
+
+data: {"type": "stage_start", "stage": "cache", "label": "Looking in cache for similar questions"}
+
+data: {"type": "stage_start", "stage": "guardrail", "label": "Checking the question is in scope"}
+
+data: {"type": "stage_start", "stage": "route", "label": "Routing your question to the right tool"}
+
+data: {"type": "stage_done", "stage": "customer", "ms": 86, "detail": {"loaded": true}}
+
+data: {"type": "stage_done", "stage": "recall_st", "ms": 356}
+
+data: {"type": "stage_done", "stage": "guardrail", "ms": 397, "detail": {"verdict": "in_scope"}}
+
+data: {"type": "stage_done", "stage": "cache", "ms": 692, "detail": {"hit": false}}
+
+data: {"type": "stage_done", "stage": "route", "ms": 3997, "detail": {"route": "rag", "action": null, "reasoning": "The user is asking about the restocking fee and box requirements for returning an item, which falls under policy questions."}}
+
+data: {"type": "stage_start", "stage": "recall_lt", "label": "Searching your long-term memory"}
+
+data: {"type": "tool_invoke", "route": "rag", "action": null, "label": "Searching the policy database"}
+
+data: {"type": "tool_invoke", "route": "order", "action": "submit_dispute", "label": "Running order / submit_dispute"}
+
+data: {"type": "tool_done", "route": "order", "action": "submit_dispute", "ms": 372, "summary": "✅ Dispute submitted successfully!"}
+
+data: {"type": "stage_done", "stage": "recall_lt", "ms": 2533, "detail": {"facts": 0}}
+
+data: {"type": "tool_done", "route": "rag", "action": null, "ms": 19640, "summary": "**Decision: ESCALATE**"}
+
+data: {"type": "stage_start", "stage": "synth", "label": "Composing your reply", "detail": {"model": "gpt-4o-mini"}}
+
+data: {"type": "stage_done", "stage": "synth", "ms": 6104, "detail": {"model": "gpt-4o-mini"}}
+
+data: {"type": "final", "answer": "Hi Demo Customer, I understand your concerns about returning the Smart TV. Unfortunately, our current policies don't provide clear information regarding restocking fees for electronics or the specific requirements for the condition of the box. \n\nTo get the most accurate information, I've escalated your inquiry to a human agent who can provide further clarification. Your dispute has been submitted successfully, and you can track it using the Reference ID DIS-20260706-8F8834. \n\nIf you have any urgent questions, feel free to contact customer support at +1 800 555 0199. Thank you for your patience!", "route": "multi", "routes": ["rag", "order"], "cached": false, "latency_ms": 30331, "trace_id": null, "timings": {"customer": 86, "recall_st": 356, "guardrail": 397, "route": 3997, "cag": 692, "recall_lt": 2533, "tool": 19641, "synth": 6104, "save": 0}, "model_used": "gpt-4o-mini"}
+
