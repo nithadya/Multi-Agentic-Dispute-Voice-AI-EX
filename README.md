@@ -609,6 +609,3 @@ done
 | Auto-title never fires | Need ≥ 4 ST turns and the title must still be the auto-generated default. Reset by creating a new session. |
 | Langfuse traces missing | `pip install --upgrade 'langfuse>=3.0.0'`. The v2 fallback in `observability.py` works but newer is better. |
 
----
-
-**License:** MIT
