@@ -1,12 +1,14 @@
-# Autonomous E-Commerce Dispute Resolution AI
+# Autonomous Multi-Vendor E-Commerce Dispute Resolution AI
 
-> **E-commerce Dispute Resolution System** — React.js + FastAPI + Hybrid GraphRAG (Neo4j + Qdrant) + LangGraph Multi-Agent Framework + LiveKit Voice AI + Langfuse Observability. Based on Design **st20305808**.
+> **Multi-Vendor Dispute Resolution System** — React.js + FastAPI + Hybrid GraphRAG (Neo4j + Qdrant) + LangGraph Multi-Agent Framework + LiveKit Voice AI + Langfuse Observability.
 
 ---
 
-## What's new in Week 15
+## Recent Changes
 
-This week the voice path moved from *"works in LiveKit's playground"* to *"first-class feature in the actual app"* — with a measured sub-2-second latency budget, integrity-preserving memory on barge-in, and full-stack observability.
+### Voice Pipeline — Production-Grade Upgrade
+
+The voice path moved from a prototype to a first-class feature with measured sub-2-second latency, integrity-preserving memory on barge-in, and full-stack observability.
 
 | Feature | Impact |
 |---|---|
@@ -16,19 +18,15 @@ This week the voice path moved from *"works in LiveKit's playground"* to *"first
 | **Reactive UI bubble** (`VoiceBubble.tsx` + `VoiceRoom.tsx`) | WebAudio-driven SVG that pulses with mic + agent audio. Five states: idle / listening / thinking / speaking / error. Latency HUD beneath. |
 | **LiveKit token endpoint** (`/voice/token`) | Browser-callable JWT minter so the UI joins LiveKit rooms without exposing the API secret. |
 | **Sidebar split — Voice / Chat** | The session list now has two halves: voice calls on top, text chats below. Client-side partition by `voice-` prefix on `session_id`. |
-| **Auto-generated session titles** | After 4 turns, a fast Groq LLM summarises the conversation into a 3–6 word title. Replaces `"Conversation 2026-05-17 12:30"` with something like `"Cardiology Appointment Booking"`. Costs ~$0.00001 per session. |
+| **Auto-generated session titles** | After 4 turns, a fast Groq LLM summarises the conversation into a 3–6 word title. Replaces `"Conversation 2026-05-17 12:30"` with something like `"Vendor Refund Dispute Resolution"`. Costs ~$0.00001 per session. |
 | **Latency observability triangle** | Per-turn timings visible in **three places**: worker log, Langfuse `voice_pipeline` span with metadata, browser HUD via LiveKit data channel. |
 | **Tuned VAD endpointing** | `silence_threshold_ms`: 500 → 300, `min_endpointing_delay`: 0.5 → 0.3. 400 ms saved per turn. Yaml + dataclass defaults now in sync. |
 | **Worker pre-warming** (`warm_start`) | One tiny `llm_fast.ainvoke("hi")` at boot primes the HTTPS pool so call #1 doesn't pay TLS handshake cost. |
 | **Langfuse v3+/v2 import fallback** | Tracing works whether your env has langfuse v2 or v4. |
 
-Each item above is labelled with the file it touches; see the **Architecture** and **Voice pipeline internals** sections below for how they fit together.
-
 ---
 
-## What's new in Week 16 — Deploy to AWS + CI/CD
-
-Week 16 takes the local production stack to the cloud and makes deployment hands-off.
+### Deploy to AWS + CI/CD
 
 | Feature | Impact |
 |---|---|
@@ -40,7 +38,7 @@ Week 16 takes the local production stack to the cloud and makes deployment hands
 | **GitHub Actions CI/CD (OIDC)** | Push to `dev` → GitHub authenticates via OIDC (no stored keys), builds the arm64 image, pushes to ECR, and force-rolls the `api` + `worker` ECS services until stable. See `.github/workflows/deploy.yml`. |
 | **Cost guardrails** | AWS Budgets emails an alert every $20. Full cost breakdown, free-tier/credit analysis, and pause/teardown commands in `docs/DisputeAI_Cloud_Services_Cost_and_Decisions.docx`. |
 
-### Deployment topology (Week 16)
+### Deployment topology
 
 ```mermaid
 flowchart TB
@@ -69,8 +67,7 @@ flowchart TB
     class REDIS,SSM,EXT store;
 ```
 
-
-Pre-class AWS setup (account, IAM user, CLI) is in `docs/AWS_From_Zero_Account_and_IAM_Setup.docx`. Deployment commands are in the **Deploying to AWS** section below.
+Pre-setup (account, IAM user, CLI) is in `docs/AWS_From_Zero_Account_and_IAM_Setup.docx`. Deployment commands are in the **Deploying to AWS** section below.
 
 ---
 
@@ -80,7 +77,7 @@ Two entry surfaces, one orchestrator core.
 
 ```mermaid
 flowchart TB
-    subgraph TEXT["TEXT PATH · Week 13"]
+    subgraph TEXT["TEXT PATH"]
         B1["Browser"] --> API["FastAPI /chat"]
         API --> DG["decision_graph"]
         DG --> GR["Guardrail · Llama"]
@@ -88,14 +85,14 @@ flowchart TB
         CAG --> ACH["achat()"]
     end
 
-    subgraph VOICE["VOICE PATH · Week 14 + 15"]
+    subgraph VOICE["VOICE PATH"]
         VB["Browser · React"] --> TOK["POST /voice/token → JWT"]
         TOK --> LK["LiveKit Cloud"]
         LK --> VW["Voice Worker"]
         VAD["Silero VAD"] --> STT["Deepgram STT"]
         STT --> ADP["LangGraphLLMAdapter"]
         VW --> ADP
-        ADP --> FAST["achat_stream_fast() · Week 15"]
+        ADP --> FAST["achat_stream_fast()"]
         FAST --> GROQ["Groq llama-3.3-70b · real streaming"]
         GROQ --> TTS["ElevenLabs TTS → audio"]
         FAST --> BG["_save_voice_turn_async"]
@@ -105,7 +102,7 @@ flowchart TB
     subgraph CORE["AgentOrchestrator · LangGraph"]
         ORCH["recall → supervisor → fan-out"]
         ORCH --> A1["admin"]
-        ORCH --> A2["clinical"]
+        ORCH --> A2["dispute"]
         ORCH --> A3["direct"]
         ORCH --> A4["web"]
         A1 --> MERGE["merge_responses → save_memory"]
@@ -123,9 +120,9 @@ flowchart TB
     class MEM,LF store;
 ```
 
-**Key boundary:** `src/voice/` and `ui/src/components/Voice*.tsx` are a self-contained vertical slice. The voice fast path is the only orchestrator addition (`achat_stream_fast`); the multi-agent text graph is untouched. Removing the voice layer leaves Week 13 fully functional.
+**Key boundary:** `src/voice/` and `ui/src/components/Voice*.tsx` are a self-contained vertical slice. The voice fast path is the only orchestrator addition (`achat_stream_fast`); the multi-agent text graph is untouched. Removing the voice layer leaves the text-path fully functional.
 
-### Voice pipeline internals (Week 15)
+### Voice pipeline internals
 
 ```mermaid
 flowchart TB
@@ -160,7 +157,7 @@ Perceived endpoint = layer 2 + layer 3 = **600 ms**.
 flowchart TB
     U(["User stops speaking"]) -->|300 ms| V["VAD endpointing"]
     V -->|200 ms| S["Deepgram STT · streaming"]
-    S -->|"&lt;150 ms"| O["Orchestrator pre-LLM<br/>time-boxed memory fetch · off-thread"]
+    S -->|"<150 ms"| O["Orchestrator pre-LLM<br/>time-boxed memory fetch · off-thread"]
     O -->|"200–400 ms"| G["Groq llama-3.3-70b · first token"]
     G -->|200 ms| E["ElevenLabs TTS · first byte"]
     E -->|200 ms| N["Network · browser ↔ region"]
@@ -169,8 +166,6 @@ flowchart TB
     classDef goal fill:#e4ecda,stroke:#548235,color:#2c4214;
     class R goal;
 ```
-
-The full Week 15 latency story (including the `streaming=False` bug fix that cost 2 seconds, and the sync Supabase fetch that cost another 700–1500 ms) is on slide 7 of the deck and Concept 1 of the code walkthrough.
 
 ### MCP integration layer
 
@@ -192,22 +187,22 @@ Three MCP servers, three origins, one agent. The text path uses MCP-backed tools
 ## Project Structure
 
 ```
-E2E Deployment/
+Multi-Vendor Dispute AI/
 │
 ├── src/
-│   ├── voice/                                    # ← Week 14 voice side-car
+│   ├── voice/                                    # ← Voice side-car
 │   │   ├── __init__.py
-│   │   ├── config.py                             # ★ W15: VAD defaults 300/0.3
+│   │   ├── config.py                             # VAD defaults 300/0.3
 │   │   ├── stt.py                                # make_stt — Deepgram nova-3
 │   │   ├── tts.py                                # make_tts — ElevenLabs / Deepgram
-│   │   ├── adapter.py                            # ★ W15: LangGraphLLMStream._run rewritten
-│   │   │                                         #         (token streaming + barge-in + Langfuse span)
+│   │   ├── adapter.py                            # LangGraphLLMStream._run rewritten
+│   │   │                                         # (token streaming + barge-in + Langfuse span)
 │   │   ├── pipeline.py                           # VoiceSession + SessionManager + event helpers
-│   │   ├── agent.py                              # ★ W15: warm_start wired, latency data-channel publish
-│   │   └── run.py                                # ★ W15: initialize_process_timeout=60s
+│   │   ├── agent.py                              # warm_start wired, latency data-channel publish
+│   │   └── run.py                                # initialize_process_timeout=60s
 │   │
 │   ├── agents/
-│   │   ├── orchestrator.py                       # ★ W15: achat_stream_fast + _save_voice_turn_async
+│   │   ├── orchestrator.py                       # achat_stream_fast + _save_voice_turn_async
 │   │   ├── decision_graph.py                     # Text-path guardrail + CAG short-circuit
 │   │   ├── guardrail.py
 │   │   ├── router.py
@@ -218,16 +213,16 @@ E2E Deployment/
 │   ├── mcp_servers/                              # CRM, memory, RAG, web, CAG, crawler MCP servers
 │   │
 │   ├── api/
-│   │   ├── main.py                               # ★ W15: voice_router registered
+│   │   ├── main.py                               # voice_router registered
 │   │   ├── schemas.py
 │   │   └── routers/
-│   │       ├── chat.py                           # ★ W15: maybe_auto_title_sync at 3 save sites
-│   │       ├── chat_sessions.py                  # ★ W15: _is_default_title + maybe_auto_title_sync
-│   │       ├── voice.py                          # ★ NEW W15: /voice/token JWT endpoint
-│   │       ├── health.py, patients.py
+│   │       ├── chat.py                           # maybe_auto_title_sync at save sites
+│   │       ├── chat_sessions.py                  # _is_default_title + maybe_auto_title_sync
+│   │       ├── voice.py                          # /voice/token JWT endpoint
+│   │       ├── health.py, customers.py
 │   │       └── tools/{cag,crawl,crm,memory,rag,web}.py
 │   │
-│   ├── memory/                                   # 4-tier memory (Week 13)
+│   ├── memory/                                   # 4-tier memory
 │   │   ├── st_store.py, lt_store.py
 │   │   ├── episodic_store.py, procedural_store.py
 │   │   ├── memory_ops.py                         # MemoryDistiller + MemoryRecaller
@@ -235,75 +230,66 @@ E2E Deployment/
 │   │
 │   ├── services/{chat_service, crm_service, ingest_service}/
 │   │
-│   ├── workers/                                  # ★ NEW W16: Arq background worker
+│   ├── workers/                                  # Arq background worker
 │   │   ├── tasks.py                              #   WorkerSettings: save_chat_turn, auto_title, distill
 │   │   └── enqueue.py                            #   ARQ_WORKER_ENABLED-gated job enqueue
 │   │
 │   └── infrastructure/
 │       ├── config.py
-│       ├── observability.py                      # ★ W15: v3+/v2 langfuse import fallback
+│       ├── observability.py                      # v3+/v2 langfuse import fallback
 │       ├── llm/
-│       │   └── llm_provider.py                   # ★ W15: get_fast_chat_llm defaults streaming=True
+│       │   └── llm_provider.py                   # get_fast_chat_llm defaults streaming=True
 │       ├── db/
 │       └── log.py
 │
 ├── ui/                                           # React + Vite + Tailwind + Framer Motion
 │   └── src/
-│       ├── App.tsx                               # ★ W15: Voice button + modal + sidebar-refresh hooks
+│       ├── App.tsx                               # Voice button + modal + sidebar-refresh hooks
 │       ├── components/
-│       │   ├── VoiceBubble.tsx                   # ★ NEW W15: reactive SVG blob (5 states)
-│       │   ├── VoiceRoom.tsx                     # ★ NEW W15: LiveKit + WebAudio analysers
-│       │   ├── Sidebar.tsx                       # ★ W15: split into Voice (top) + Chat (bottom)
+│       │   ├── VoiceBubble.tsx                   # reactive SVG blob (5 states)
+│       │   ├── VoiceRoom.tsx                     # LiveKit + WebAudio analysers
+│       │   ├── Sidebar.tsx                       # split into Voice (top) + Chat (bottom)
 │       │   ├── ChatWindow.tsx, InputBox.tsx, MessageBubble.tsx, …
 │       │   └── …
-│       └── hooks/{useChat, useChatStream, useSessions, useHealth, usePatient}.ts
-│
-├── notebooks/
-│   ├── 01_routing_memory_and_tools.ipynb         # Week 13: 4-tier memory + routing
-│   ├── 02_multi_agent_langgraph.ipynb            # Week 13: LangGraph multi-agent + MCP
-│   ├── 03_voice_pipeline_fundamentals.ipynb      # Week 14: STT/TTS/VAD/EOU standalone
-│   └── 04_voice_agent_livekit.ipynb              # Week 14: voice + LangGraph integration
+│       └── hooks/{useChat, useChatStream, useSessions, useHealth, useCustomer}.ts
 │
 ├── docker/
-│   ├── api/Dockerfile                            # ★ W16: + Node stage bundles the SPA into the image
+│   ├── api/Dockerfile                            # Node stage bundles the SPA into the image
 │   ├── web/Dockerfile                            # nginx + built React (local compose only)
-│   └── voice/Dockerfile                          # LiveKit voice worker
+│   └── voice/Dockerfile                         # LiveKit voice worker
 │
-├── copilot/                                      # ★ NEW W16: AWS Copilot manifests
-│   ├── environments/dev/manifest.yml            #   VPC + ALB + ECS cluster
+├── copilot/                                      # AWS Copilot manifests
+│   ├── environments/dev/manifest.yml             #   VPC + ALB + ECS cluster
 │   ├── api/manifest.yml                          #   Load Balanced Web Service (2 tasks, arm64)
 │   ├── worker/manifest.yml                       #   Backend Service (Arq worker)
 │   └── voice/manifest.yml                        #   Backend Service (on-demand, count 0)
 │
 ├── .github/workflows/
-│   └── deploy.yml                                # ★ NEW W16: OIDC CI/CD — push to dev → AWS
+│   └── deploy.yml                                # OIDC CI/CD — push to dev → AWS
 │
 ├── scripts/
 │   ├── seed_crm_unified.py, ingest_to_qdrant.py
 │   ├── seed_procedures.py, rebuild_cag_cache.py
 │   ├── init_supabase.py
-│   └── aws/                                      # ★ NEW W16: build_push_images.sh, deploy_redis.sh,
-│       └── …                                     #            push_secrets.sh, cfn/redis-cluster.yml
+│   └── aws/                                      # build_push_images.sh, deploy_redis.sh,
+│       └── …                                     # push_secrets.sh, cfn/redis-cluster.yml
 │
 ├── config/
-│   └── param.yaml                                # ★ W15: VAD 300/0.3 defaults (yaml ↔ dataclass)
+│   └── param.yaml                                # VAD 300/0.3 defaults (yaml ↔ dataclass)
 │
 ├── docs/
-│   ├── AWS_From_Zero_Account_and_IAM_Setup.{docx,pdf}      # beginner AWS account + IAM + CLI guide
-│   └── DisputeAI_Cloud_Services_Cost_and_Decisions.{docx,pdf}  # cost, free tier, teardown
+│   ├── AWS_From_Zero_Account_and_IAM_Setup.{docx,pdf}
+│   └── DisputeAI_Cloud_Services_Cost_and_Decisions.{docx,pdf}
 │
 ├── README.md                                     # ← this file
-├── STUDENT_SETUP_GUIDE.md
 ├── Makefile                                      # demo / voice / voice-test / voice-logs / …
-├── docker-compose.yml                            # api + web (default), voice (profile), ★ W16: + redis + worker
-├── compose.prod.yml                              # ★ NEW W16: 2 api replicas + worker + voice + redis + web
+├── docker-compose.yml                            # api + web (default), voice (profile), + redis + worker
+├── compose.prod.yml                              # 2 api replicas + worker + voice + redis + web
 ├── pyproject.toml                                # Source of truth for dependencies
 ├── requirements.txt                              # Lock-step with pyproject.toml
 ├── .env.example                                  # Template — includes voice section
 └── uv.lock
 ```
-
-**★ = files added or modified in Week 15 / Week 16** (labelled inline as W15 / W16).
 
 ---
 
@@ -320,16 +306,16 @@ make voice
 cd ui && npm install && npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173` or `5174`) in **Chrome** (Safari has WebAudio quirks). Log in as a patient, click **Voice** in the top bar, click **Start Call**.
+Open the URL Vite prints (usually `http://localhost:5173` or `5174`) in **Chrome** (Safari has WebAudio quirks). Log in as a customer, click **Voice** in the top bar, click **Start Call**.
 
 **Readiness signals:**
 - API ready when log says `Application startup complete` (~60 s — lifespan startup is gated on Supabase + Qdrant + MCP + CAG warm-up).
 - Voice worker ready when log says **`LLM connection warm — first call took XXX ms`** AND `registered worker`.
 - UI ready when Vite prints the local URL.
 
-If you hit `ModuleNotFoundError: No module named 'langchain_core'` running uvicorn natively, your shell's `python` resolves to homebrew's Python, not anaconda's. Use:
+If you hit `ModuleNotFoundError: No module named 'langchain_core'` running uvicorn natively, your shell's `python` resolves to system Python, not your venv. Use:
 ```bash
-PYTHONPATH=src /opt/anaconda3/bin/python -m uvicorn api.main:app --reload --port 8000
+PYTHONPATH=src python -m uvicorn api.main:app --reload --port 8000
 ```
 
 ---
@@ -352,10 +338,10 @@ The voice worker has no exposed port — it dials outbound to `LIVEKIT_URL` and 
 
 | Channel | Query | What it exercises | Latency |
 |---|---|---|---|
-| Text | `What are the opening hours?` | CAG cache → FAQ hit | ~290 ms |
-| Text | `Do I have a booking next week?` | CRM → Supabase patient lookup | ~3–5 s |
-| Voice | `Book me an appointment with a cardiologist` | Voice fast path | ~1.5 s |
-| Voice | `Tell me about post-surgery care` *(interrupt mid-sentence)* | Barge-in + partial-answer memory | ~400 ms to silence |
+| Text | `What is your dispute policy?` | CAG cache → FAQ hit | ~290 ms |
+| Text | `Show my active dispute for order #1234` | CRM → Supabase customer lookup | ~3–5 s |
+| Voice | `I want to raise a dispute for my order` | Voice fast path | ~1.5 s |
+| Voice | `Tell me about the refund process` *(interrupt mid-sentence)* | Barge-in + partial-answer memory | ~400 ms to silence |
 
 ---
 
@@ -400,8 +386,8 @@ voice:
 |---|---|---|
 | `POST` | `/chat` | Send message, get reply (decision_graph → orchestrator). Background-schedules `touch_session` + `maybe_auto_title`. |
 | `POST` | `/chat/stream` | SSE — node-by-node state updates. |
-| `POST` | `/voice/token` | Mint a short-lived LiveKit JWT (10-min TTL) for the browser. **New in Week 15.** |
-| `GET` | `/chat_sessions?user_id=…` | List a patient's sessions for the sidebar. Voice + chat sessions in one list, partitioned client-side by `voice-` prefix. |
+| `POST` | `/voice/token` | Mint a short-lived LiveKit JWT (10-min TTL) for the browser. |
+| `GET` | `/chat_sessions?user_id=…` | List a customer's sessions for the sidebar. Voice + chat sessions in one list, partitioned client-side by `voice-` prefix. |
 | `POST` | `/chat_sessions` | Create a new chat session. |
 | `PATCH` | `/chat_sessions/{id}` | Rename or archive. |
 | `DELETE` | `/chat_sessions/{id}` | Hard-delete (cascades ST turns). |
@@ -413,10 +399,10 @@ voice:
 ### Examples
 
 ```bash
-# Text chat
+# Text chat — dispute query
 curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
-  -d '{"user_message": "Who are the cardiologists?", "user_id": "94781030736", "session_id": "demo"}'
+  -d '{"user_message": "What vendors are available?", "user_id": "94781030736", "session_id": "demo"}'
 
 # Mint a voice token (the browser calls this)
 curl -X POST http://localhost:8000/voice/token \
@@ -445,7 +431,7 @@ flowchart TB
     T --> M["node_save_memory · ST store + LT distillation"]
 ```
 
-**Voice path (Week 15):**
+**Voice path:**
 ```mermaid
 flowchart TB
     T["trace: voice_turn"] --> SP["span: voice_pipeline<br/>user_id · session_id · tags[voice, fast_path]"]
@@ -514,30 +500,10 @@ sequenceDiagram
 
 ---
 
-## Course context
-
-This codebase is the **Week 15** material for the AI Engineer Essentials bootcamp.
-
-| Week | Topic | What it added |
-|---|---|---|
-| 6 | Agentic design patterns (from scratch) | The vocabulary |
-| 7 | Memory + routing + multi-agent (from scratch) | Memory, classifier router |
-| 9 | LangGraph fundamentals | StateGraph mental model |
-| 10 | Multi-agent system (rebuilt on LangGraph) | Fan-out/fan-in topology |
-| 12 | MCP integration (portable tools) | Tool boundary moves to MCP |
-| 13 | Containerised + decision graph | Docker, FastAPI, React UI, guardrail, CAG |
-| 14 | Voice interface | LiveKit, Deepgram, ElevenLabs, Silero; voice side-car |
-| **15** | **Voice goes production-shaped + first-class UI feature** | **Voice fast path, real streaming, barge-in memory integrity, reactive bubble, sidebar split, auto-title, latency observability triangle** |
-| **16** | **Deploy to AWS + CI/CD** | **ECS Fargate (Graviton/arm64), ElastiCache Redis + Arq worker, ECR, ALB, SSM secrets, SPA served from the API, GitHub Actions OIDC auto-deploy** |
-
-**Week 15 is purely additive** to Week 14 — removing `src/voice/` (the Week-15-tagged additions), `ui/src/components/Voice*.tsx`, and `src/api/routers/voice.py` leaves Week 13/14 fully functional.
-
----
-
 ## Dependency highlights
 
 ```
-# Voice stack (Week 14)
+# Voice stack
 livekit>=1.0.0
 livekit-agents>=1.5.0
 livekit-plugins-deepgram>=1.5.0
@@ -549,11 +515,11 @@ sounddevice>=0.5.0
 onnxruntime>=1.17.0
 torch>=2.0.0
 
-# Week 15 — UI voice integration
+# UI voice integration
 livekit-client@^2.5.0           # (in ui/package.json)
 framer-motion@^11.11.17         # (already present, used for bubble animation)
 
-# MCP (Week 12)
+# MCP
 mcp>=1.27.0
 fastmcp>=3.0.0
 langchain-mcp-adapters>=0.2.2
@@ -563,7 +529,7 @@ langchain-mcp-adapters>=0.2.2
 
 ---
 
-## Deploying to AWS (Week 16)
+## Deploying to AWS
 
 Prerequisite: an AWS account + IAM user + CLI configured as profile `disputeai`
 (region `us-west-2`). The full beginner walkthrough is
@@ -623,7 +589,7 @@ done
 
 | You want to … | Read |
 |---|---|
-| **Set up your own dev environment** | `STUDENT_SETUP_GUIDE.md` |
+| **Set up your own dev environment** | `SETUP_GUIDE.md` |
 | **Set up AWS from zero (account + IAM + CLI)** | `docs/AWS_From_Zero_Account_and_IAM_Setup.docx` |
 | **Understand AWS cost, free tier & decisions** | `docs/DisputeAI_Cloud_Services_Cost_and_Decisions.docx` |
 | **Deploy to AWS** | the **Deploying to AWS** section above |
@@ -634,7 +600,7 @@ done
 
 | Symptom | Fix |
 |---|---|
-| `ModuleNotFoundError: No module named 'langchain_core'` | Two Pythons on PATH. Use `PYTHONPATH=src /opt/anaconda3/bin/python -m uvicorn ...` |
+| `ModuleNotFoundError: No module named 'langchain_core'` | Two Pythons on PATH. Use `PYTHONPATH=src python -m uvicorn api.main:app ...` |
 | Voice worker loops with `error initializing process` | Already fixed via `initialize_process_timeout=60.0` in `voice/run.py`. If still failing, check `.env` has all LiveKit / Deepgram / Groq / ElevenLabs keys. |
 | Voice "Start call" button does nothing | Open browser DevTools → Network — likely the API isn't fully booted yet (lifespan startup takes ~60 s). |
 | Bubble freezes at IDLE | Use Chrome. If Chrome too, check mic permission in browser settings. |
@@ -643,8 +609,6 @@ done
 | Auto-title never fires | Need ≥ 4 ST turns and the title must still be the auto-generated default. Reset by creating a new session. |
 | Langfuse traces missing | `pip install --upgrade 'langfuse>=3.0.0'`. The v2 fallback in `observability.py` works but newer is better. |
 
-
 ---
 
-**License:** MIT — for educational use within the AI Engineer Essentials course.
-# aee-capstone
+**License:** MIT

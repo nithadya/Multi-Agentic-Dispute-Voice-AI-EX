@@ -1,35 +1,47 @@
-# E-commerce AI Refactoring Walkthrough
+# Multi-Vendor Dispute Resolution AI — Walkthrough
 
 ## Summary of Changes
 
-The legacy Nawaloka hospital/clinic CRM has been completely replaced with an E-commerce Dispute AI system, allowing you to test the AI agent with domain-specific mock data. All components (Database Schema, API Backend, Seeding Scripts, Frontend UI) have been successfully mapped to the new architecture.
+The system has been fully built as an **Autonomous Multi-Vendor E-Commerce Dispute Resolution AI**. All components (Database Schema, API Backend, Seeding Scripts, Frontend UI) are mapped to the dispute resolution domain.
 
 ### Database & ORM
 - Created `customers`, `vendors`, `orders`, and `disputes` tables.
-- Replaced `Patient`, `Doctor`, and `Booking` models in `src/infrastructure/db/crm_models.py` with `Customer`, `Vendor`, `Order`, and `Dispute` SQLAlchemy models.
+- Implemented `Customer`, `Vendor`, `Order`, and `Dispute` SQLAlchemy models in `src/infrastructure/db/crm_models.py`.
 
 ### API Routing
-- Refactored `src/api/routers/patients.py` to `customers.py`. 
-- Updated `lookup`, `register`, and `update` endpoints to use the new `Customer` schema (`email`, `tier`, `dispute_count`, etc.).
+- `src/api/routers/customers.py` — handles customer `lookup`, `register`, and `update` endpoints with the `Customer` schema (`email`, `tier`, `dispute_count`, etc.).
 - Updated `main.py` and `chat_sessions.py` to use `customer_id`.
 
 ### Seeding Logic (`scripts/seed_crm_unified.py`)
-- Swapped hospital entities for Dummy E-commerce Stores (TechStore LK, FashionHub).
-- Generates dummy orders and a dispute record for the primary login user.
-- Creates the Demo Customer with the explicit phone number `94781030736`. 
+- Seeded with multi-vendor E-commerce entities (TechStore LK, FashionHub, etc.).
+- Generates dummy orders and dispute records for the primary login customer.
+- Creates the Demo Customer with the explicit phone number `94781030736`.
 
 ### Frontend Updates
-- Migrated React components: `PatientGate` → `CustomerGate`, `usePatient` → `useCustomer`.
-- Swapped UI labels and API calls to point to `/customers` routes.
-- Updated the Tool Explorer UI to lookup customers instead of patients.
+- React components use `CustomerGate` and `useCustomer` hook.
+- UI labels and API calls point to `/customers` routes.
+- Tool Explorer UI looks up customers instead of legacy entities.
+
+### Multi-Agent Dispute Graph
+- `agents/orchestrator.py` — LangGraph fan-out with specialized sub-agents (admin, dispute, direct, web).
+- `agents/decision_graph.py` — guardrail + CAG short-circuit for the text path.
+- 4-tier memory (short-term, long-term, episodic, procedural) via Supabase + pgvector + Qdrant.
+
+### Voice Path
+- LiveKit + Deepgram STT + ElevenLabs TTS with real token streaming and barge-in memory integrity.
+- `achat_stream_fast()` — sub-2-second latency voice path bypassing the multi-agent graph.
+- Reactive `VoiceBubble.tsx` UI component with 5 states and latency HUD.
 
 ## Verification
-You are now ready to initialize the database and seed the data! 
-As requested, you can now run the following commands in your own terminal to test the full AI:
+
+Initialize the database and seed the data:
 
 ```bash
 make init-supabase
 make seed-crm-no-llm
 ```
 
-After doing so, you can log in through the UI with the phone number `078 103 0736` (which Maps to Demo Customer) and test the CRM capabilities for orders and disputes.
+After seeding, log in through the UI with the phone number `078 103 0736` (Demo Customer) and test:
+- CRM lookups for orders and disputes
+- Dispute creation and resolution flow via text chat
+- Voice-based dispute queries via the Voice button

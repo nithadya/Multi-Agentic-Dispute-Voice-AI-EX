@@ -1,14 +1,11 @@
 """
-Prompt templates for the E-Commerce Dispute Resolution AI.
+Prompt templates for the Multi-Vendor E-Commerce Dispute Resolution AI.
 
-Upgraded from store domain (DisputeAI E-Commerce Specialist) to
-e-commerce dispute resolution domain .
-
-Domain pivot:
-  - admin_agent → classification_agent (dispute type + severity)
-  - clinical_agent → investigation_agent (policy lookup via Hybrid GraphRAG)
-  - direct_agent → resolution_agent (decision + refund)
-  - web_agent → escalation_agent (human handoff)
+Agent roles:
+  - admin_agent     → Classification Agent (dispute type + severity triage)
+  - clinical_agent  → Investigation Agent (policy lookup via Hybrid GraphRAG)
+  - direct_agent    → Resolution Agent (final decision + refund calculation)
+  - web_agent       → Escalation Agent (human handoff for high-value / fraud cases)
 
 Prompts are fetched from LangFuse Prompt Management at runtime.
 If a prompt hasn't been created in LangFuse yet, the local fallback
